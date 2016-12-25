@@ -32,14 +32,14 @@ LanderGame.prototype.isKeyDown = function(k) {
 
 LanderGame.prototype.init = function() {
   this.CANVAS_WIDTH = 1000;
-  this.CANVAS_HEIGHT = 650;
-  this.CUR_GRAVITY = -9.8; // m/s^2
+  this.CANVAS_HEIGHT = 800;
+  this.CUR_GRAVITY = -20; // m/s^2
   this.FPS = 30;
-
-  this.MASS_SAT = 100; // kg
-  this.PIXEL_RATIO = 10/1;
+  this.PIXEL_RATIO = 5/1;
+  this.MAX_FUEL = 500;
 
   this.downKeys = [];
+  this.fuel = this.MAX_FUEL;
 
   this.satPosX = this.CANVAS_WIDTH/2;
   this.satPosY = 100;
@@ -54,10 +54,12 @@ LanderGame.prototype.init = function() {
 
   this.gameState = GameStates.PLAYING;
 
-  this.canvas = document.getElementById('GameCanvas').getContext('2d');
+  this.terrainPositions = [];
 
-  this.canvas.font = '36px sans-serif';
-  this.canvas.textAlign = 'center';
+  this.generateTerrain();
+  //console.log(this.terrainPositions);
+
+  this.canvas = document.getElementById('GameCanvas').getContext('2d');
 
   var self = this;
 
@@ -86,29 +88,40 @@ LanderGame.prototype.init = function() {
 
 };
 
+LanderGame.prototype.generateTerrain = function() {
+  for(var i = 0; i < 5; i++) {
+    this.terrainPositions.push({x:this.randomRange(i*200,(i+1)*200),y: this.CANVAS_HEIGHT - 80, r: this.randomRange(70,125)});
+  }
+};
+
 LanderGame.prototype.updateThrust = function() {
   if(this.downKeys.length === 0) {
     this.shipSpriteState = ShipStates.BASE;
   }
-  else {
+  else if(this.fuel > 0){
     if(this.isKeyDown(38)) {
       this.satVy -= 2;
+      this.fuel -= 2;
       this.shipSpriteState = ShipStates.BOTTOM_ROCKET;
       if(this.isKeyDown(37)) {
         this.satVx -= 1.5;
+        this.fuel -= 1.5;
         this.shipSpriteState = ShipStates.BOTTOM_RIGHT_ROCKET;
       }
       else if(this.isKeyDown(39)) {
         this.satVx += 1.5;
+        this.fuel -= 1.5;
         this.shipSpriteState = ShipStates.BOTTOM_LEFT_ROCKET;
       }
     }
     else if (this.isKeyDown(37)) {
       this.satVx -= 1.5;
+      this.fuel -= 1.5;
       this.shipSpriteState = ShipStates.RIGHT_ROCKET;
     }
     else if (this.isKeyDown(39)) {
       this.satVx += 1.5;
+      this.fuel -= 1.5;
       this.shipSpriteState = ShipStates.LEFT_ROCKET;
     }
   }
@@ -116,15 +129,17 @@ LanderGame.prototype.updateThrust = function() {
 
 LanderGame.prototype.draw = function() {
   this.canvas.clearRect(0,0, this.CANVAS_WIDTH, this.CANVAS_HEIGHT);
+  this.canvas.font = '36px sans-serif';
+  this.canvas.textAlign = 'center';
 
   this.drawShipSprite();
 
 	this.canvas.fillStyle = 'gray';
 	this.canvas.fillRect(0, this.CANVAS_HEIGHT - 100, this.CANVAS_WIDTH, 100);
 
-	//this.canvas.fillRect(this.satPosX, this.satPosY, 20, 20);
-	//this.canvas.fill();
-	//this.canvas.stroke();
+  for(var i = 0; i < 5; i++) {
+    this.drawCircle(this.terrainPositions[i]);
+  }
 
   if(this.gameState === GameStates.WIN) {
     this.canvas.fillStyle = 'green';
@@ -140,40 +155,67 @@ LanderGame.prototype.draw = function() {
     this.canvas.fillText('Press [Enter] to restart', this.CANVAS_WIDTH/2, this.CANVAS_HEIGHT/2);
   }
 
-  //this.canvas.strokeStyle = 'red';
-	//this.canvas.fillText('Vy: ' + Math.round(this.satVy) + ' m/s', 5, 15);
-	//this.canvas.fillText('y: ' + Math.round((this.CANVAS_HEIGHT - this.satPosY)*this.PIXEL_RATIO) + ' m', 5, 30);
+  this.canvas.fillStyle = 'white';
+  this.canvas.font = '24px sans-serif';
+  this.canvas.textAlign = 'left';
+  this.canvas.fillText('Fuel: ' + (this.fuel <= 0 ? 0 : this.fuel), 10, 30);
 };
 
 LanderGame.prototype.drawShipSprite = function() {
-  this.canvas.drawImage(this.imgShipSprite, this.shipSpriteState*100, 0, 100, 92, this.satPosX - 42, this.satPosY - 50, 100, 92);
+  // midline -52,-68
+  this.canvas.drawImage(this.imgShipSprite, this.shipSpriteState*100, 0, 100, 92, this.satPosX - 52, this.satPosY - 68, 100, 92);
+  this.canvas.fillStyle = 'red';
+  //this.canvas.fillRect(this.satPosX+20,this.satPosY-3,2,2);
 };
 
 LanderGame.prototype.update = function() {
-  console.log(this.downKeys);
+
   if(this.gameState === GameStates.PLAYING) {
 
     this.updateThrust();
 
     this.satVy -= this.CUR_GRAVITY/this.FPS;
 
-  	if(this.satPosY + (this.satVy / this.PIXEL_RATIO) > (this.CANVAS_HEIGHT - 120)) {
-
-  		if(this.satVy > 10 || this.satVx > 10) {
+    if(this.satPosY + (this.satVy / this.PIXEL_RATIO) > (this.CANVAS_HEIGHT - 100)) {
+      if(this.satVy > 10 || this.satVx > 10) {
         this.shipSpriteState = ShipStates.EXPLOSION;
         this.gameState = GameStates.LOSE;
-  		}
-  		else {
+      }
+      else {
         this.shipSpriteState = ShipStates.BASE;
         this.gameState = GameStates.WIN;
-  		}
-  		this.satPosY = this.CANVAS_HEIGHT - 120;
-  	}
-  	else {
-  		this.satPosY += (this.satVy / this.PIXEL_RATIO);
+      }
+      this.satPosY = this.CANVAS_HEIGHT - 100;
+    }
+    else {
+      this.satPosY += (this.satVy / this.PIXEL_RATIO);
   		this.satPosX += (this.satVx / this.PIXEL_RATIO);
-  	}
+      this.collisionDetection();
+    }
   }
+};
+
+LanderGame.prototype.collisionDetection = function() {
+  for(var i = 0; i < this.terrainPositions.length; i++) {
+    var d1 = Math.pow(this.terrainPositions[i].y - (this.satPosY-3),2) + Math.pow(this.terrainPositions[i].x - (this.satPosX-20),2);
+    var d2 = Math.pow(this.terrainPositions[i].y - (this.satPosY-3),2) + Math.pow(this.terrainPositions[i].x - (this.satPosX+20),2);
+    var r2 = Math.pow(this.terrainPositions[i].r,2);
+
+    if(d1 <= r2 || d2 <= r2) {
+      //collision
+      this.shipSpriteState = ShipStates.EXPLOSION;
+      this.gameState = GameStates.LOSE;
+    }
+  }
+};
+
+LanderGame.prototype.drawCircle = function(data) {
+  this.canvas.fillStyle = 'gray';
+  this.canvas.strokeStyle = 'gray';
+  this.canvas.beginPath();
+	this.canvas.arc(data.x,data.y,data.r,2*Math.PI, false)
+	this.canvas.fill();
+	this.canvas.stroke();
 };
 
 LanderGame.prototype.newGame = function() {
@@ -183,9 +225,15 @@ LanderGame.prototype.newGame = function() {
   this.satVy = 0;
   this.satVx = 0;
 
+  this.fuel = this.MAX_FUEL;
+
   this.shipSpriteState = ShipStates.BASE;
-  
+
   this.gameState = GameStates.PLAYING;
+};
+
+LanderGame.prototype.randomRange = function(min,max) {
+  return Math.round(Math.random() * (max-min) + min);
 };
 
 window.onload = function() {
