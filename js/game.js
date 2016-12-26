@@ -14,6 +14,12 @@ var GameStates = {
   LOSE: 2
 };
 
+var Keys = {
+  UP: 38,
+  LEFT: 37,
+  RIGHT: 39
+};
+
 var LanderGame = function() {
 };
 
@@ -24,10 +30,6 @@ LanderGame.prototype.load = function() {
     self.init();
   });
   this.imgShipSprite.src = 'img/ship_sprite.png';
-};
-
-LanderGame.prototype.isKeyDown = function(k) {
-  return this.downKeys.indexOf(k) != -1;
 };
 
 LanderGame.prototype.init = function() {
@@ -57,7 +59,6 @@ LanderGame.prototype.init = function() {
   this.terrainPositions = [];
 
   this.generateTerrain();
-  //console.log(this.terrainPositions);
 
   this.canvas = document.getElementById('GameCanvas').getContext('2d');
 
@@ -88,42 +89,13 @@ LanderGame.prototype.init = function() {
 
 };
 
-LanderGame.prototype.generateTerrain = function() {
-  for(var i = 0; i < 5; i++) {
-    this.terrainPositions.push({x:this.randomRange(i*200,(i+1)*200),y: this.CANVAS_HEIGHT - 80, r: this.randomRange(70,125)});
-  }
+LanderGame.prototype.isKeyDown = function(k) {
+  return this.downKeys.indexOf(k) != -1;
 };
 
-LanderGame.prototype.updateThrust = function() {
-  if(this.downKeys.length === 0) {
-    this.shipSpriteState = ShipStates.BASE;
-  }
-  else if(this.fuel > 0){
-    if(this.isKeyDown(38)) {
-      this.satVy -= 2;
-      this.fuel -= 2;
-      this.shipSpriteState = ShipStates.BOTTOM_ROCKET;
-      if(this.isKeyDown(37)) {
-        this.satVx -= 1.5;
-        this.fuel -= 1.5;
-        this.shipSpriteState = ShipStates.BOTTOM_RIGHT_ROCKET;
-      }
-      else if(this.isKeyDown(39)) {
-        this.satVx += 1.5;
-        this.fuel -= 1.5;
-        this.shipSpriteState = ShipStates.BOTTOM_LEFT_ROCKET;
-      }
-    }
-    else if (this.isKeyDown(37)) {
-      this.satVx -= 1.5;
-      this.fuel -= 1.5;
-      this.shipSpriteState = ShipStates.RIGHT_ROCKET;
-    }
-    else if (this.isKeyDown(39)) {
-      this.satVx += 1.5;
-      this.fuel -= 1.5;
-      this.shipSpriteState = ShipStates.LEFT_ROCKET;
-    }
+LanderGame.prototype.generateTerrain = function() {
+  for(var i = 0; i < 5; i++) {
+    this.terrainPositions.push({x:this.randomRange(i*200,(i+1)*200),y: this.CANVAS_HEIGHT - 80, r: this.randomRange(70,110)});
   }
 };
 
@@ -162,10 +134,8 @@ LanderGame.prototype.draw = function() {
 };
 
 LanderGame.prototype.drawShipSprite = function() {
-  // midline -52,-68
   this.canvas.drawImage(this.imgShipSprite, this.shipSpriteState*100, 0, 100, 92, this.satPosX - 52, this.satPosY - 68, 100, 92);
   this.canvas.fillStyle = 'red';
-  //this.canvas.fillRect(this.satPosX+20,this.satPosY-3,2,2);
 };
 
 LanderGame.prototype.update = function() {
@@ -191,6 +161,39 @@ LanderGame.prototype.update = function() {
       this.satPosY += (this.satVy / this.PIXEL_RATIO);
   		this.satPosX += (this.satVx / this.PIXEL_RATIO);
       this.collisionDetection();
+    }
+  }
+};
+
+LanderGame.prototype.updateThrust = function() {
+  if(this.downKeys.length === 0) {
+    this.shipSpriteState = ShipStates.BASE;
+  }
+  else if(this.fuel > 0){
+    if(this.isKeyDown(Keys.UP)) {
+      this.satVy -= 2;
+      this.fuel -= 2;
+      this.shipSpriteState = ShipStates.BOTTOM_ROCKET;
+      if(this.isKeyDown(Keys.LEFT)) {
+        this.satVx -= 1.5;
+        this.fuel -= 1.5;
+        this.shipSpriteState = ShipStates.BOTTOM_RIGHT_ROCKET;
+      }
+      else if(this.isKeyDown(Keys.RIGHT)) {
+        this.satVx += 1.5;
+        this.fuel -= 1.5;
+        this.shipSpriteState = ShipStates.BOTTOM_LEFT_ROCKET;
+      }
+    }
+    else if (this.isKeyDown(Keys.LEFT)) {
+      this.satVx -= 1.5;
+      this.fuel -= 1.5;
+      this.shipSpriteState = ShipStates.RIGHT_ROCKET;
+    }
+    else if (this.isKeyDown(Keys.RIGHT)) {
+      this.satVx += 1.5;
+      this.fuel -= 1.5;
+      this.shipSpriteState = ShipStates.LEFT_ROCKET;
     }
   }
 };
@@ -229,6 +232,10 @@ LanderGame.prototype.newGame = function() {
 
   this.shipSpriteState = ShipStates.BASE;
 
+  this.terrainPositions = [];
+
+  this.generateTerrain();
+
   this.gameState = GameStates.PLAYING;
 };
 
@@ -239,5 +246,4 @@ LanderGame.prototype.randomRange = function(min,max) {
 window.onload = function() {
   var game = new LanderGame();
   game.load();
-  //game.init();
 };
