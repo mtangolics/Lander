@@ -17,7 +17,9 @@ var GameStates = {
 var Keys = {
   UP: 38,
   LEFT: 37,
-  RIGHT: 39
+  RIGHT: 39,
+  DOWN: 40,
+  ENTER: 13
 };
 
 var LanderGame = function() {
@@ -27,6 +29,7 @@ LanderGame.prototype.load = function() {
   this.imgShipSprite = new Image(700,92);
   var self = this;
   this.imgShipSprite.addEventListener('load', function() {
+    // Sprite has finished loaded so the game can be initialized
     self.init();
   });
   this.imgShipSprite.src = 'img/ship_sprite.png';
@@ -35,7 +38,7 @@ LanderGame.prototype.load = function() {
 LanderGame.prototype.init = function() {
   this.CANVAS_WIDTH = 1000;
   this.CANVAS_HEIGHT = 800;
-  this.CUR_GRAVITY = -20; // m/s^2
+  this.CUR_GRAVITY = -20;
   this.FPS = 30;
   this.PIXEL_RATIO = 5/1;
   this.MAX_FUEL = 500;
@@ -43,11 +46,11 @@ LanderGame.prototype.init = function() {
   this.downKeys = [];
   this.fuel = this.MAX_FUEL;
 
-  this.satPosX = this.CANVAS_WIDTH/2;
-  this.satPosY = 100;
+  this.rocketPosX = this.CANVAS_WIDTH/2;
+  this.rocketPosY = 100;
 
-  this.satVy = 0;
-  this.satVx = 0;
+  this.rocketVy = 0;
+  this.rocketVx = 0;
 
   this.originX = this.CANVAS_WIDTH/2;
   this.originY = this.CANVAS_HEIGHT;
@@ -66,7 +69,7 @@ LanderGame.prototype.init = function() {
 
   document.addEventListener('keydown', function(ev) {
 
-    if(ev.keyCode === 13 && this.gameState !== GameStates.PLAYING) {
+    if(ev.keyCode === Keys.ENTER && self.gameState !== GameStates.PLAYING) {
       self.newGame();
     }
 
@@ -82,6 +85,7 @@ LanderGame.prototype.init = function() {
       }
   });
 
+  // Update variables and redraw 30 times per second
   this.gameTimer = setInterval(function() {
     self.update();
     self.draw();
@@ -95,6 +99,7 @@ LanderGame.prototype.isKeyDown = function(k) {
 
 LanderGame.prototype.generateTerrain = function() {
   for(var i = 0; i < 5; i++) {
+    // x, y, radius
     this.terrainPositions.push({x:this.randomRange(i*200,(i+1)*200),y: this.CANVAS_HEIGHT - 80, r: this.randomRange(70,110)});
   }
 };
@@ -110,6 +115,7 @@ LanderGame.prototype.draw = function() {
 	this.canvas.fillRect(0, this.CANVAS_HEIGHT - 100, this.CANVAS_WIDTH, 100);
 
   for(var i = 0; i < 5; i++) {
+    // draw randomly placed circles to form the terrain
     this.drawCircle(this.terrainPositions[i]);
   }
 
@@ -134,8 +140,8 @@ LanderGame.prototype.draw = function() {
 };
 
 LanderGame.prototype.drawShipSprite = function() {
-  this.canvas.drawImage(this.imgShipSprite, this.shipSpriteState*100, 0, 100, 92, this.satPosX - 52, this.satPosY - 68, 100, 92);
-  this.canvas.fillStyle = 'red';
+  // Draw the ship sprite centered over the coordinates
+  this.canvas.drawImage(this.imgShipSprite, this.shipSpriteState*100, 0, 100, 92, this.rocketPosX - 52, this.rocketPosY - 68, 100, 92);
 };
 
 LanderGame.prototype.update = function() {
@@ -144,10 +150,11 @@ LanderGame.prototype.update = function() {
 
     this.updateThrust();
 
-    this.satVy -= this.CUR_GRAVITY/this.FPS;
+    this.rocketVy -= this.CUR_GRAVITY/this.FPS;
 
-    if(this.satPosY + (this.satVy / this.PIXEL_RATIO) > (this.CANVAS_HEIGHT - 100)) {
-      if(this.satVy > 10 || this.satVx > 10) {
+    if(this.rocketPosY + (this.rocketVy / this.PIXEL_RATIO) > (this.CANVAS_HEIGHT - 100)) {
+      // Fail if the rocket hits the ground with a vertical or horizontal velocity exceeding 10
+      if(this.rocketVy > 10 || this.rocketVx > 10) {
         this.shipSpriteState = ShipStates.EXPLOSION;
         this.gameState = GameStates.LOSE;
       }
@@ -155,11 +162,13 @@ LanderGame.prototype.update = function() {
         this.shipSpriteState = ShipStates.BASE;
         this.gameState = GameStates.WIN;
       }
-      this.satPosY = this.CANVAS_HEIGHT - 100;
+      this.rocketPosY = this.CANVAS_HEIGHT - 100;
     }
     else {
-      this.satPosY += (this.satVy / this.PIXEL_RATIO);
-  		this.satPosX += (this.satVx / this.PIXEL_RATIO);
+      // Rocket hasn't hit the ground yet, so continue updating
+      this.rocketPosY += (this.rocketVy / this.PIXEL_RATIO);
+  		this.rocketPosX += (this.rocketVx / this.PIXEL_RATIO);
+      // Check for collision with terrain
       this.collisionDetection();
     }
   }
@@ -171,27 +180,27 @@ LanderGame.prototype.updateThrust = function() {
   }
   else if(this.fuel > 0){
     if(this.isKeyDown(Keys.UP)) {
-      this.satVy -= 2;
+      this.rocketVy -= 2;
       this.fuel -= 2;
       this.shipSpriteState = ShipStates.BOTTOM_ROCKET;
       if(this.isKeyDown(Keys.LEFT)) {
-        this.satVx -= 1.5;
+        this.rocketVx -= 1.5;
         this.fuel -= 1.5;
         this.shipSpriteState = ShipStates.BOTTOM_RIGHT_ROCKET;
       }
       else if(this.isKeyDown(Keys.RIGHT)) {
-        this.satVx += 1.5;
+        this.rocketVx += 1.5;
         this.fuel -= 1.5;
         this.shipSpriteState = ShipStates.BOTTOM_LEFT_ROCKET;
       }
     }
     else if (this.isKeyDown(Keys.LEFT)) {
-      this.satVx -= 1.5;
+      this.rocketVx -= 1.5;
       this.fuel -= 1.5;
       this.shipSpriteState = ShipStates.RIGHT_ROCKET;
     }
     else if (this.isKeyDown(Keys.RIGHT)) {
-      this.satVx += 1.5;
+      this.rocketVx += 1.5;
       this.fuel -= 1.5;
       this.shipSpriteState = ShipStates.LEFT_ROCKET;
     }
@@ -200,12 +209,14 @@ LanderGame.prototype.updateThrust = function() {
 
 LanderGame.prototype.collisionDetection = function() {
   for(var i = 0; i < this.terrainPositions.length; i++) {
-    var d1 = Math.pow(this.terrainPositions[i].y - (this.satPosY-3),2) + Math.pow(this.terrainPositions[i].x - (this.satPosX-20),2);
-    var d2 = Math.pow(this.terrainPositions[i].y - (this.satPosY-3),2) + Math.pow(this.terrainPositions[i].x - (this.satPosX+20),2);
+    // d1 = distance between terrain origin and the bottom left corner of rocket hitbox
+    // d2 = distance between terrain origin and the bottom right corner of rocket hitbox
+    var d1 = Math.pow(this.terrainPositions[i].y - (this.rocketPosY-3),2) + Math.pow(this.terrainPositions[i].x - (this.rocketPosX-20),2);
+    var d2 = Math.pow(this.terrainPositions[i].y - (this.rocketPosY-3),2) + Math.pow(this.terrainPositions[i].x - (this.rocketPosX+20),2);
     var r2 = Math.pow(this.terrainPositions[i].r,2);
 
     if(d1 <= r2 || d2 <= r2) {
-      //collision
+      // Trigger a collision because we've intersected with one of the terrain elements
       this.shipSpriteState = ShipStates.EXPLOSION;
       this.gameState = GameStates.LOSE;
     }
@@ -222,11 +233,12 @@ LanderGame.prototype.drawCircle = function(data) {
 };
 
 LanderGame.prototype.newGame = function() {
-  this.satPosX = this.CANVAS_WIDTH/2;
-  this.satPosY = 100;
+  // reset the necessary variables
+  this.rocketPosX = this.CANVAS_WIDTH/2;
+  this.rocketPosY = 100;
 
-  this.satVy = 0;
-  this.satVx = 0;
+  this.rocketVy = 0;
+  this.rocketVx = 0;
 
   this.fuel = this.MAX_FUEL;
 
